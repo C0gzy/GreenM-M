@@ -5,22 +5,29 @@ import asyncio
 import datetime
 import yt_dlp
 import discord
+import os
 from discord.ext import commands
 from discord.utils import get
+import concurrent.futures
 
-################################ Variables ################################################################################
+################################# Variables ################################################################################
 
 token = "NTIwNzE1NTA0MTM5MjM5NDI0.XY_cLg.My6pyPKEqSj4fAy9dbK_KQHnWqs"
 intents = discord.Intents().all()
 bot = commands.Bot(command_prefix='?',intents=intents)
 
+
+mode = 1
+
 Functionality = {
     "Main" : [],
+    "Version" : "1.0",
+    "Modes" : [" (Fast mode)"," (Slow mode expect very slow downloads)"],
     "Voice" : [],
     "Queue" : {
             "Songs" : [],
-            "Thumbnail" : [],
             "Name" : [],
+            "Thumbnail" : [],
             "Duration" : []
         },
     "VoiceChannel" : None,
@@ -50,7 +57,8 @@ ydl_opts = {
 async def on_ready(): 
     print("Bot ready for operation")
     synced = await bot.tree.sync()
-    await bot.change_presence(status=discord.Status.online, activity=discord.Game("Version 1.0 (Fast mode)"))#Slow mode expect slower downloads
+
+    await bot.change_presence(status=discord.Status.online, activity=discord.Game(Functionality["Version"] + Functionality["Modes"][mode]))#Slow mode expect very slow downloads
 
 @bot.tree.command(name="play", description="Use this to play youtube videos")
 async def play(interaction: discord.Interaction , search: str):
@@ -80,7 +88,6 @@ async def skip(interaction: discord.Interaction):#ctx):
     voice = get(bot.voice_clients, guild=interaction.guild)
     if voice and voice.is_playing():
         print("Playing Next Song")
-        Functionality["PlayingSong"] = False
         discord.VoiceClient.stop(voice)
         #voice.stop()
         await interaction.response.send_message(content="Next Song")
@@ -96,10 +103,6 @@ async def whatsplaying(interaction: discord.Interaction):#ctx):
         return
     
     embedVar = discord.Embed(title=Functionality["Queue"]["Name"][0] ,color=0x008200)
-    
-
-    #audio = AudioSegment.from_file("song.mp3")
-    
     embedVar.add_field(name="Length: ", value=datetime.timedelta(seconds=Functionality["Queue"]["Duration"][0]), inline=False)
     embedVar.set_image(url=Functionality["Queue"]["Thumbnail"][0])
     await interaction.response.send_message(embed=embedVar)
@@ -113,8 +116,6 @@ async def queue(interaction: discord.Interaction):
             embedVar.add_field(name="Position "+str(i)+": ", value=Functionality["Queue"]["Name"][i], inline=False)
 
         await interaction.response.send_message(embed=embedVar)
-        #WhatInQueue = " | ".join(str(x) for x in Functionality["Queue"]["Name"])
-        #await interaction.response.send_message(content="Current Songs in Queue "+ WhatInQueue)
     else:
         await interaction.response.send_message(content="Queue is empty")
 
@@ -135,8 +136,30 @@ async def leave(interaction: discord.Interaction):
 
    
 
-
 ############################################ Functions ###########################################################################
+
+async def DownloadSong(Video):
+    song_there = os.path.isfile("song"+str(Functionality["NumberTrack"])+".mp3")
+    if song_there:
+        os.remove("song"+str(Functionality["NumberTrack"])+".mp3")
+        print("Removed old song file")
+
+    Functionality["Queue"]["Songs"].append("song"+str(Functionality["NumberTrack"])+".mp3")
+   
+    Location = "./song"+str(Functionality["NumberTrack"])+".mp3"
+    ydl_opts['outtmpl'] = str(Location)
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        print("Downloading audio now\n")
+        info_dict = ydl.extract_info(Video, download=False)
+        await asyncio.get_event_loop().run_in_executor(concurrent.futures.ThreadPoolExecutor(), ydl.download, [Video])
+        #ydl.download([Video])
+
+    
+    print(Functionality["Queue"]["Songs"])
+    Functionality["NumberTrack"] = Functionality["NumberTrack"] + 1
+    Functionality["Queue"]["Thumbnail"].append(info_dict.get('thumbnail'))
+    Functionality["Queue"]["Name"].append(info_dict.get('title', None))
+    Functionality["Queue"]["Duration"].append(info_dict.get('duration'))
 
 def playsong(voice,interaction):
     voice.play(discord.FFmpegPCMAudio(Functionality["Queue"]["Songs"][0]), after=lambda e: NextSong(interaction))
@@ -149,16 +172,20 @@ def NextSong(DisUser):
         return
 
     Functionality["PlayingSong"] = False
-    Functionality["Queue"]["Songs"].pop(0)
+    
     Functionality["Queue"]["Thumbnail"].pop(0)
     Functionality["Queue"]["Name"].pop(0)
     Functionality["Queue"]["Duration"].pop(0)
-    
+    songtoremove = Functionality["Queue"]["Songs"][0]
+    Functionality["Queue"]["Songs"].pop(0)
+
     if len(Functionality["Queue"]["Songs"]) == 0:
         return
     Functionality["PlayingSong"] = True
     voice = get(bot.voice_clients, guild=DisUser.guild)
     playsong(voice,DisUser)
+
+    os.remove(songtoremove)
     #await DisUser.response.send_message(content="Now Playing 🎵"+ Functionality["Queue"]["Name"][0] +"🎵")
 
 
@@ -186,22 +213,6 @@ async def JoinVoiceChannel(DisUser):
         return False
 
 
-async def DownloadSong(Video):
-    Functionality["Queue"]["Songs"].append("song"+str(Functionality["NumberTrack"])+".mp3")
-   
-    Location = "./song"+str(Functionality["NumberTrack"])+".mp3"
-    ydl_opts['outtmpl'] = str(Location)
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        print("Downloading audio now\n")
-        info_dict = ydl.extract_info(Video, download=False)
-        await asyncio.get_event_loop().run_in_executor(None, ydl.download, [Video])
-        #ydl.download([Video])
 
-    
-    print(Functionality["Queue"]["Songs"])
-    Functionality["NumberTrack"] = Functionality["NumberTrack"] + 1
-    Functionality["Queue"]["Thumbnail"].append(info_dict.get('thumbnail'))
-    Functionality["Queue"]["Name"].append(info_dict.get('title', None))
-    Functionality["Queue"]["Duration"].append(info_dict.get('duration'))
 
 bot.run('NTIwNzE1NTA0MTM5MjM5NDI0.GS0Quf.3ODUesGu-gut6AivlSNqk7LB1oc6BQ0VNMp3Sk')
