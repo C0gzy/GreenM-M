@@ -6,6 +6,7 @@ import datetime
 import yt_dlp
 import discord
 import os
+import imdb
 from discord.ext import commands
 from discord.utils import get
 import concurrent.futures
@@ -17,12 +18,12 @@ intents = discord.Intents().all()
 bot = commands.Bot(command_prefix='?',intents=intents)
 
 
-mode = 1
+mode = 0
 
 Functionality = {
     "Main" : [],
-    "Version" : "1.0",
-    "Modes" : [" (Fast mode)"," (Slow mode expect very slow downloads)"],
+    "Version" : "1.1",
+    "Modes" : [" Patched Download Speeds"],
     "Voice" : [],
     "Queue" : {
             "Songs" : [],
@@ -57,11 +58,16 @@ ydl_opts = {
 async def on_ready(): 
     print("Bot ready for operation")
     synced = await bot.tree.sync()
-
     await bot.change_presence(status=discord.Status.online, activity=discord.Game(Functionality["Version"] + Functionality["Modes"][mode]))#Slow mode expect very slow downloads
 
 @bot.tree.command(name="play", description="Use this to play youtube videos")
-async def play(interaction: discord.Interaction , search: str):
+async def play(interaction: discord.Interaction , search: str , lowqualitymode:bool= None):
+    if lowqualitymode == None or lowqualitymode == False:
+        ydl_opts["format"] = "bestaudio/best"
+    else:
+        ydl_opts["format"] = "worstaudio/worst"
+
+
     VC = await JoinVoiceChannel(interaction)
     if VC == False:
         await interaction.response.send_message("Not in voice channel please join one and try again")
@@ -134,7 +140,40 @@ async def leave(interaction: discord.Interaction):
     Functionality["NumberTrack"] = 0
     await interaction.response.send_message(content="Left Call")
 
+############################################ Other Commands ######################################################################
+
+@bot.tree.command(name="movienight", description="Creates a post about movie night")
+async def movienight(interaction: discord.Interaction, movie:str , timestart:str = None):
+    await interaction.response.send_message("Gather Data ...")
+    IM = imdb.Cinemagoer()
+    
+    Rmovie = IM.search_movie(movie)
+    Film = IM.get_movie(Rmovie[0].movieID)
    
+    length = Film.get('runtimes')
+    Genre = Film.get('genres')
+    Rating = Film.get('rating')
+    Name = Film.get('title')
+    Cover = Film.get('full-size cover url')
+    Desc = Film.get('plot outline')
+
+    embedVar = discord.Embed(title=Name ,color=0x008200)
+    if len(Desc) > 256:
+        Desc = Desc[:253] + "..."
+
+    embedVar.description = Desc
+
+    if timestart != None:
+        embedVar.add_field(name="We will be streaming at ", value=timestart,inline=False)
+
+    embedVar.add_field(name="Genre: ", value= ' / '.join(Genre) , inline=False)
+    embedVar.add_field(name="Length: ", value=datetime.timedelta(minutes=int(length[0])), inline=True)
+    embedVar.add_field(name="IMBD Rating: ", value=Rating, inline=True)
+    embedVar.set_image(url=Cover)
+    await interaction.edit_original_response(content="@Movie Announcements ")
+    await interaction.edit_original_response(embed=embedVar)
+    
+
 
 ############################################ Functions ###########################################################################
 
@@ -211,8 +250,6 @@ async def JoinVoiceChannel(DisUser):
     except:
         print("not in voice channel")
         return False
-
-
 
 
 bot.run('NTIwNzE1NTA0MTM5MjM5NDI0.GS0Quf.3ODUesGu-gut6AivlSNqk7LB1oc6BQ0VNMp3Sk')
