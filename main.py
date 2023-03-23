@@ -13,7 +13,7 @@ import concurrent.futures
 
 ################################# Variables ################################################################################
 
-token = "NTIwNzE1NTA0MTM5MjM5NDI0.XY_cLg.My6pyPKEqSj4fAy9dbK_KQHnWqs"
+token = "Insert Discord Token Here"
 intents = discord.Intents().all()
 bot = commands.Bot(command_prefix='?',intents=intents)
 
