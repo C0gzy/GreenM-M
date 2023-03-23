@@ -252,4 +252,4 @@ async def JoinVoiceChannel(DisUser):
         return False
 
 
-bot.run('NTIwNzE1NTA0MTM5MjM5NDI0.GS0Quf.3ODUesGu-gut6AivlSNqk7LB1oc6BQ0VNMp3Sk')
+bot.run('Insert Discord Token here')
