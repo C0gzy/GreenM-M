@@ -13,7 +13,7 @@ import concurrent.futures
 
 ################################# Variables ################################################################################
 
-token = "Insert Discord Token Here"
+token = "NTIwNzE1NTA0MTM5MjM5NDI0.GKOZjT.uiN4gCuNE5hjooA7qI6IB59akrCPtBcn6DxqLI"
 intents = discord.Intents().all()
 bot = commands.Bot(command_prefix='?',intents=intents)
 
@@ -22,7 +22,7 @@ mode = 0
 
 Functionality = {
     "Main" : [],
-    "Version" : "1.1",
+    "Version" : "1.2",
     "Modes" : [" Patched Download Speeds"],
     "Voice" : [],
     "Queue" : {
@@ -33,7 +33,8 @@ Functionality = {
         },
     "VoiceChannel" : None,
     "PlayingSong" : False,
-    "NumberTrack" : 0
+    "NumberTrack" : 0,
+    "Volume" : 1.0
 }
 
 '''
@@ -48,7 +49,7 @@ ydl_opts = {
     'format': 'bestaudio/best',
     'outtmpl': None,
     'forceip':'6',
-    'extractaudio': True,
+    'extractaudio': True
 
 }
 
@@ -58,30 +59,29 @@ ydl_opts = {
 async def on_ready(): 
     print("Bot ready for operation")
     synced = await bot.tree.sync()
-    await bot.change_presence(status=discord.Status.online, activity=discord.Game(Functionality["Version"] + Functionality["Modes"][mode]))#Slow mode expect very slow downloads
+    await bot.change_presence(status=discord.Status.online, activity=discord.Game(Functionality["Version"] + Functionality["Modes"][mode]))
 
 @bot.tree.command(name="play", description="Use this to play youtube videos")
 async def play(interaction: discord.Interaction , search: str , lowqualitymode:bool= None):
+    await interaction.response.send_message(content="Searching ...")
     if lowqualitymode == None or lowqualitymode == False:
         ydl_opts["format"] = "bestaudio/best"
     else:
         ydl_opts["format"] = "worstaudio/worst"
 
-
-    VC = await JoinVoiceChannel(interaction)
+    VC = await JoinVoiceChannel(interaction) 
     if VC == False:
         await interaction.response.send_message("Not in voice channel please join one and try again")
         return
     YoutubeVideo = Search_Youtube(search)
     voice = get(bot.voice_clients, guild=interaction.guild)
-
     if Functionality["PlayingSong"] == True:
         await interaction.response.send_message(content="Song already playing adding to Queue ...")
         await DownloadSong(YoutubeVideo)
         await interaction.edit_original_response(content="Added song 🎵" + Functionality["Queue"]["Name"][len(Functionality["Queue"]["Name"]) - 1]  + "🎵 to the queue In position "+ str(len(Functionality["Queue"]["Name"]) - 1))
         return
     else:
-        await interaction.response.send_message(content="Downloading ...")
+        await interaction.edit_original_response(content="Downloading ...")
         Functionality["PlayingSong"] = True
         await DownloadSong(YoutubeVideo)
         print(Functionality["Queue"]["Songs"][0])
@@ -140,11 +140,38 @@ async def leave(interaction: discord.Interaction):
     Functionality["NumberTrack"] = 0
     await interaction.response.send_message(content="Left Call")
 
+@bot.tree.command(name="debug" ,description="Will display variable infomation for debugging")
+async def debug(interaction: discord.Interaction):
+    try:
+        embedVar = discord.Embed(title="Green M&M Debug" ,color=0x008200)
+        embedVar.add_field(name="PlayingSong : ", value=Functionality["PlayingSong"], inline=False)
+        embedVar.add_field(name="Queue Songs : ", value= ' / '.join(Functionality["Queue"]["Songs"]), inline=False)
+        embedVar.add_field(name="Queue Thumbnails : ", value=  ' / '.join(Functionality["Queue"]["Thumbnail"]), inline=False)
+        embedVar.add_field(name="Queue Names : ", value=  ' / '.join(Functionality["Queue"]["Name"]), inline=False)
+        embedVar.add_field(name="Queue Durations : ", value=  ' / '.join(Functionality["Queue"]["Duration"]), inline=False)
+        embedVar.add_field(name="NumberTrack : ", value=Functionality["NumberTrack"], inline=False)
+
+        await interaction.response.send_message(embed=embedVar)
+    except Exception as error:
+        await interaction.response.send_message(content=error)
+
+@bot.tree.command(name="volume", description="Change volume of music 0 - 100")
+async def volume(interaction: discord.Interaction , vol : float):
+    if (vol < 0):
+        vol = 0
+    elif (vol > 100):
+        vol = 100
+
+    Functionality["Volume"] = vol / 100
+    await interaction.response.send_message(content="Volume set to " + str(vol))
+
+
+
 ############################################ Other Commands ######################################################################
 
-@bot.tree.command(name="movienight", description="Creates a post about movie night")
+@bot.tree.command(name="movienight", description="Creates a post about movie night",)
 async def movienight(interaction: discord.Interaction, movie:str , timestart:str = None):
-    await interaction.response.send_message("Gather Data ...")
+    await interaction.response.send_message("Gathering Data ...")
     IM = imdb.Cinemagoer()
     
     Rmovie = IM.search_movie(movie)
@@ -159,51 +186,59 @@ async def movienight(interaction: discord.Interaction, movie:str , timestart:str
 
     embedVar = discord.Embed(title=Name ,color=0x008200)
     if len(Desc) > 256:
-        Desc = Desc[:253] + "..."
+        Desc = Desc[:253] + " ..."
 
     embedVar.description = Desc
 
     if timestart != None:
         embedVar.add_field(name="We will be streaming at ", value=timestart,inline=False)
+    else:
+        embedVar.add_field(name="We will be streaming at ", value="Now")
 
     embedVar.add_field(name="Genre: ", value= ' / '.join(Genre) , inline=False)
     embedVar.add_field(name="Length: ", value=datetime.timedelta(minutes=int(length[0])), inline=True)
     embedVar.add_field(name="IMBD Rating: ", value=Rating, inline=True)
     embedVar.set_image(url=Cover)
-    await interaction.edit_original_response(content="@Movie Announcements ")
-    await interaction.edit_original_response(embed=embedVar)
+    await interaction.edit_original_response(content="<@&834170793000435762>" , embed=embedVar)
+    #await interaction.edit_original_response(embed=embedVar)
     
-
+############################################ To add clash of clans tracker #######################################################
 
 ############################################ Functions ###########################################################################
 
 async def DownloadSong(Video):
-    song_there = os.path.isfile("song"+str(Functionality["NumberTrack"])+".mp3")
-    if song_there:
-        os.remove("song"+str(Functionality["NumberTrack"])+".mp3")
-        print("Removed old song file")
+    try:
 
-    Functionality["Queue"]["Songs"].append("song"+str(Functionality["NumberTrack"])+".mp3")
-   
-    Location = "./song"+str(Functionality["NumberTrack"])+".mp3"
-    ydl_opts['outtmpl'] = str(Location)
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        print("Downloading audio now\n")
-        info_dict = ydl.extract_info(Video, download=False)
-        await asyncio.get_event_loop().run_in_executor(concurrent.futures.ThreadPoolExecutor(), ydl.download, [Video])
-        #ydl.download([Video])
+        song_there = os.path.isfile("song"+str(Functionality["NumberTrack"])+".mp3")
+        if song_there:
+            os.remove("song"+str(Functionality["NumberTrack"])+".mp3")
+            print("Removed old song file")
 
+        Functionality["Queue"]["Songs"].append("song"+str(Functionality["NumberTrack"])+".mp3")
     
-    print(Functionality["Queue"]["Songs"])
-    Functionality["NumberTrack"] = Functionality["NumberTrack"] + 1
-    Functionality["Queue"]["Thumbnail"].append(info_dict.get('thumbnail'))
-    Functionality["Queue"]["Name"].append(info_dict.get('title', None))
-    Functionality["Queue"]["Duration"].append(info_dict.get('duration'))
+        Location = "./song"+str(Functionality["NumberTrack"])+".mp3"
+        ydl_opts['outtmpl'] = str(Location)
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            print("Downloading audio now\n")
+            info_dict = ydl.extract_info(Video, download=False)
+            await asyncio.get_event_loop().run_in_executor(concurrent.futures.ThreadPoolExecutor(), ydl.download, [Video])
+            #ydl.download([Video])
+
+        
+        print(Functionality["Queue"]["Songs"])
+        Functionality["NumberTrack"] = Functionality["NumberTrack"] + 1
+        Functionality["Queue"]["Thumbnail"].append(info_dict.get('thumbnail'))
+        Functionality["Queue"]["Name"].append(info_dict.get('title', None))
+        Functionality["Queue"]["Duration"].append(info_dict.get('duration'))
+    except Exception as e:
+        print("Error in downloading trying again!" , e)
+        DownloadSong(Video)
+
 
 def playsong(voice,interaction):
     voice.play(discord.FFmpegPCMAudio(Functionality["Queue"]["Songs"][0]), after=lambda e: NextSong(interaction))
     voice.source = discord.PCMVolumeTransformer(voice.source)
-    voice.source.volume = 1.0
+    voice.source.volume = Functionality["Volume"]
 
 
 def NextSong(DisUser):
@@ -247,9 +282,9 @@ async def JoinVoiceChannel(DisUser):
             print(f"The bot has connected to {Channel}\n")
         Functionality["VoiceChannel"] = Channel
         return Channel
-    except:
-        print("not in voice channel")
+    except Exception as err:
+        print("not in voice channel ",err)
         return False
 
 
-bot.run('Insert Discord Token here')
+bot.run('NTIwNzE1NTA0MTM5MjM5NDI0.GKOZjT.uiN4gCuNE5hjooA7qI6IB59akrCPtBcn6DxqLI')
