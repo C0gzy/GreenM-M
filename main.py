@@ -13,7 +13,7 @@ import concurrent.futures
 
 ################################# Variables ################################################################################
 
-token = "NTIwNzE1NTA0MTM5MjM5NDI0.GKOZjT.uiN4gCuNE5hjooA7qI6IB59akrCPtBcn6DxqLI"
+token = ""
 intents = discord.Intents().all()
 bot = commands.Bot(command_prefix='?',intents=intents)
 
