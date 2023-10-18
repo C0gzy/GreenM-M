@@ -287,4 +287,4 @@ async def JoinVoiceChannel(DisUser):
         return False
 
 
-bot.run('NTIwNzE1NTA0MTM5MjM5NDI0.GKOZjT.uiN4gCuNE5hjooA7qI6IB59akrCPtBcn6DxqLI')
+bot.run(token)
