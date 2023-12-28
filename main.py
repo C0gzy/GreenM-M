@@ -7,7 +7,6 @@ import yt_dlp
 import discord
 import os
 import imdb
-import sys
 from discord.ext import commands
 from discord.utils import get
 import concurrent.futures
@@ -16,7 +15,7 @@ import concurrent.futures
 
 
 
-token = str(sys.argv[1]) 
+token =  os.getenv("Token")
 intents = discord.Intents().all()
 bot = commands.Bot(command_prefix='?',intents=intents)
 
