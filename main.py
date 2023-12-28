@@ -7,13 +7,16 @@ import yt_dlp
 import discord
 import os
 import imdb
+import sys
 from discord.ext import commands
 from discord.utils import get
 import concurrent.futures
 
 ################################# Variables ################################################################################
 
-token = ""
+
+
+token = str(sys.argv[1]) 
 intents = discord.Intents().all()
 bot = commands.Bot(command_prefix='?',intents=intents)
 
@@ -22,7 +25,7 @@ mode = 0
 
 Functionality = {
     "Main" : [],
-    "Version" : "1.2",
+    "Version" : "1.1",
     "Modes" : [" Patched Download Speeds"],
     "Voice" : [],
     "Queue" : {
@@ -33,8 +36,7 @@ Functionality = {
         },
     "VoiceChannel" : None,
     "PlayingSong" : False,
-    "NumberTrack" : 0,
-    "Volume" : 1.0
+    "NumberTrack" : 0
 }
 
 '''
@@ -49,7 +51,7 @@ ydl_opts = {
     'format': 'bestaudio/best',
     'outtmpl': None,
     'forceip':'6',
-    'extractaudio': True
+    'extractaudio': True,
 
 }
 
@@ -155,23 +157,13 @@ async def debug(interaction: discord.Interaction):
     except Exception as error:
         await interaction.response.send_message(content=error)
 
-@bot.tree.command(name="volume", description="Change volume of music 0 - 100")
-async def volume(interaction: discord.Interaction , vol : float):
-    if (vol < 0):
-        vol = 0
-    elif (vol > 100):
-        vol = 100
-
-    Functionality["Volume"] = vol / 100
-    await interaction.response.send_message(content="Volume set to " + str(vol))
-
-
+#Add volume settings
 
 ############################################ Other Commands ######################################################################
 
 @bot.tree.command(name="movienight", description="Creates a post about movie night",)
 async def movienight(interaction: discord.Interaction, movie:str , timestart:str = None):
-    await interaction.response.send_message("Gathering Data ...")
+    await interaction.response.send_message("Gather Data ...")
     IM = imdb.Cinemagoer()
     
     Rmovie = IM.search_movie(movie)
@@ -207,38 +199,32 @@ async def movienight(interaction: discord.Interaction, movie:str , timestart:str
 ############################################ Functions ###########################################################################
 
 async def DownloadSong(Video):
-    try:
+    song_there = os.path.isfile("song"+str(Functionality["NumberTrack"])+".mp3")
+    if song_there:
+        os.remove("song"+str(Functionality["NumberTrack"])+".mp3")
+        print("Removed old song file")
 
-        song_there = os.path.isfile("song"+str(Functionality["NumberTrack"])+".mp3")
-        if song_there:
-            os.remove("song"+str(Functionality["NumberTrack"])+".mp3")
-            print("Removed old song file")
+    Functionality["Queue"]["Songs"].append("song"+str(Functionality["NumberTrack"])+".mp3")
+   
+    Location = "./song"+str(Functionality["NumberTrack"])+".mp3"
+    ydl_opts['outtmpl'] = str(Location)
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        print("Downloading audio now\n")
+        info_dict = ydl.extract_info(Video, download=False)
+        await asyncio.get_event_loop().run_in_executor(concurrent.futures.ThreadPoolExecutor(), ydl.download, [Video])
+        #ydl.download([Video])
 
-        Functionality["Queue"]["Songs"].append("song"+str(Functionality["NumberTrack"])+".mp3")
     
-        Location = "./song"+str(Functionality["NumberTrack"])+".mp3"
-        ydl_opts['outtmpl'] = str(Location)
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            print("Downloading audio now\n")
-            info_dict = ydl.extract_info(Video, download=False)
-            await asyncio.get_event_loop().run_in_executor(concurrent.futures.ThreadPoolExecutor(), ydl.download, [Video])
-            #ydl.download([Video])
-
-        
-        print(Functionality["Queue"]["Songs"])
-        Functionality["NumberTrack"] = Functionality["NumberTrack"] + 1
-        Functionality["Queue"]["Thumbnail"].append(info_dict.get('thumbnail'))
-        Functionality["Queue"]["Name"].append(info_dict.get('title', None))
-        Functionality["Queue"]["Duration"].append(info_dict.get('duration'))
-    except Exception as e:
-        print("Error in downloading trying again!" , e)
-        DownloadSong(Video)
-
+    print(Functionality["Queue"]["Songs"])
+    Functionality["NumberTrack"] = Functionality["NumberTrack"] + 1
+    Functionality["Queue"]["Thumbnail"].append(info_dict.get('thumbnail'))
+    Functionality["Queue"]["Name"].append(info_dict.get('title', None))
+    Functionality["Queue"]["Duration"].append(info_dict.get('duration'))
 
 def playsong(voice,interaction):
     voice.play(discord.FFmpegPCMAudio(Functionality["Queue"]["Songs"][0]), after=lambda e: NextSong(interaction))
     voice.source = discord.PCMVolumeTransformer(voice.source)
-    voice.source.volume = Functionality["Volume"]
+    voice.source.volume = 1.0
 
 
 def NextSong(DisUser):
@@ -287,4 +273,4 @@ async def JoinVoiceChannel(DisUser):
         return False
 
 
-bot.run(token)
+bot.run('NTIwNzE1NTA0MTM5MjM5NDI0.GKOZjT.uiN4gCuNE5hjooA7qI6IB59akrCPtBcn6DxqLI')
