@@ -51,6 +51,7 @@ ydl_opts = {
     'outtmpl': None,
     'forceip':'4',
     'extractaudio': True,
+    'rm-cache-dir' : True  
 
 }
 
