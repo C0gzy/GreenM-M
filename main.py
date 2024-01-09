@@ -49,7 +49,7 @@ Functionality = {
 ydl_opts = {
     'format': 'bestaudio/best',
     'outtmpl': None,
-    'forceip':'6',
+    'forceip':'4',
     'extractaudio': True,
 
 }
