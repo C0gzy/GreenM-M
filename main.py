@@ -78,7 +78,7 @@ async def play(interaction: discord.Interaction , search: str , lowqualitymode:b
     YoutubeVideo = Search_Youtube(search)
     voice = get(bot.voice_clients, guild=interaction.guild)
     if Functionality["PlayingSong"] == True:
-        await interaction.response.send_message(content="Song already playing adding to Queue ...")
+        await interaction.edit_original_response(content="Song already playing adding to Queue ...")
         await DownloadSong(YoutubeVideo)
         await interaction.edit_original_response(content="Added song 🎵" + Functionality["Queue"]["Name"][len(Functionality["Queue"]["Name"]) - 1]  + "🎵 to the queue In position "+ str(len(Functionality["Queue"]["Name"]) - 1))
         return
