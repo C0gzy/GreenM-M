@@ -1,8 +1,11 @@
 # GreenM-M
-## Version Number 1.1
+## Version Number 1.2
 Python discord bot meant for playing and downloading yt videos up to any video length
 
+### SetUp
+This Bot is now update to support Heroku natively Just add your Discord Bot Token to the environmental variables and name it "Token"
 
+If Running outside of Heroku edit the token string to just be your Discord Bot Token.
 
 ### Youtube Commands:
 /play (yt Search) optional - (lowqualitymode) : will downlaod and play a youtube video <br>
